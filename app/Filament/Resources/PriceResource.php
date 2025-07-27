@@ -18,8 +18,7 @@ class PriceResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
 
     protected static ?string $navigationLabel = 'Цены';
-
-    protected static ?string $navigationGroup = 'Управление биржами';
+    // protected static ?string $navigationGroup = 'Управление биржами';
 
     public static function getModelLabel(): string
     {
@@ -43,19 +42,20 @@ class PriceResource extends Resource
                     ->label('Валютная пара')
                     ->relationship('currencyPair', 'symbol')
                     ->required(),
-                Forms\Components\TextInput::make('bid')
+                Forms\Components\TextInput::make('bid_price')
                     ->label('Цена покупки')
                     ->required()
                     ->numeric()
+                    ->minValue(0)
+                    ->step(0.00000001)
                     ->default(0),
-                Forms\Components\TextInput::make('ask')
+                Forms\Components\TextInput::make('ask_price')
                     ->label('Цена продажи')
                     ->required()
                     ->numeric()
+                    ->minValue(0)
+                    ->step(0.00000001)
                     ->default(0),
-                Forms\Components\DateTimePicker::make('fetched_at')
-                    ->label('Время получения')
-                    ->required(),
             ]);
     }
 
@@ -71,58 +71,81 @@ class PriceResource extends Resource
                     ->label('Валютная пара')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('bid')
+                Tables\Columns\TextColumn::make('bid_price')
                     ->label('Цена покупки')
-                    ->money('USD')
+                    ->numeric(
+                        decimalPlaces: 8,
+                        decimalSeparator: '.',
+                        thousandsSeparator: ' ',
+                    )
                     ->sortable(),
-                Tables\Columns\TextColumn::make('ask')
+                Tables\Columns\TextColumn::make('ask_price')
                     ->label('Цена продажи')
-                    ->money('USD')
+                    ->numeric(
+                        decimalPlaces: 8,
+                        decimalSeparator: '.',
+                        thousandsSeparator: ' ',
+                    )
                     ->sortable(),
-                Tables\Columns\TextColumn::make('fetched_at')
+                Tables\Columns\TextColumn::make('created_at')
                     ->label('Получено')
                     ->dateTime()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('recommendation')
-                    ->label('Рекомендация')
+                Tables\Columns\TextColumn::make('spread')
+                    ->label('Спред')
                     ->state(function (Price $record): string {
-                        $bestBuy = Price::where('currency_pair_id', $record->currency_pair_id)
-                            ->orderBy('ask', 'asc')
-                            ->first();
-
-                        $bestSell = Price::where('currency_pair_id', $record->currency_pair_id)
-                            ->orderBy('bid', 'desc')
-                            ->first();
-
-                        if ($record->id === $bestBuy?->id) {
-                            return '✅ Лучшая цена для покупки';
-                        }
-
-                        if ($record->id === $bestSell?->id) {
-                            return '💰 Лучшая цена для продажи';
-                        }
-
-                        return '-';
+                        $spread = $record->ask_price - $record->bid_price;
+                        $spreadPercent = ($spread / $record->bid_price) * 100;
+                        return number_format($spreadPercent, 2) . '%';
+                    })
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->orderBy(
+                            $query->raw('(ask_price - bid_price) / bid_price * 100'),
+                            $direction
+                        );
                     }),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('exchange')
                     ->label('Биржа')
-                    ->relationship('exchange', 'name'),
+                    ->relationship('exchange', 'name')
+                    ->multiple()
+                    ->preload(),
                 Tables\Filters\SelectFilter::make('currency_pair')
                     ->label('Валютная пара')
-                    ->relationship('currencyPair', 'symbol'),
+                    ->relationship('currencyPair', 'symbol')
+                    ->multiple()
+                    ->preload(),
+                Tables\Filters\Filter::make('created_at')
+                    ->form([
+                        Forms\Components\DateTimePicker::make('created_from')
+                            ->label('От'),
+                        Forms\Components\DateTimePicker::make('created_until')
+                            ->label('До'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['created_from'],
+                                fn(Builder $query, $date): Builder => $query->where('created_at', '>=', $date),
+                            )
+                            ->when(
+                                $data['created_until'],
+                                fn(Builder $query, $date): Builder => $query->where('created_at', '<=', $date),
+                            );
+                    }),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->requiresConfirmation(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->requiresConfirmation(),
                 ]),
             ])
-            ->defaultSort('fetched_at', 'desc');
+            ->defaultSort('created_at', 'desc');
     }
 
     public static function getPages(): array

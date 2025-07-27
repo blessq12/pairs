@@ -14,8 +14,12 @@ return new class extends Migration
         Schema::create('exchanges', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique(); // Название биржи
-            $table->string('slug')->unique(); // Например, binance
+            $table->string('api_base_url'); // Базовый URL API
+            $table->boolean('is_active')->default(true); // Статус активности
             $table->timestamps();
+
+            // Индекс для быстрого поиска активных бирж
+            $table->index('is_active');
         });
     }
 

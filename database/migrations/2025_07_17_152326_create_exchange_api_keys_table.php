@@ -14,15 +14,12 @@ return new class extends Migration
         Schema::create('exchange_api_keys', function (Blueprint $table) {
             $table->id();
             $table->foreignId('exchange_id')->constrained()->onDelete('cascade');
-            $table->string('api_key')->nullable(); // API ключ
-            $table->text('api_secret')->nullable(); // API секрет
-            $table->text('additional_params')->nullable(); // Дополнительные параметры в JSON
-            $table->boolean('is_active')->default(true); // Активен ли ключ
-            $table->text('description')->nullable(); // Описание для чего используется
+            $table->text('api_key'); // Зашифрованный API ключ
+            $table->text('api_secret'); // Зашифрованный API секрет
             $table->timestamps();
 
-            // Уникальный ключ для биржи
-            $table->unique(['exchange_id', 'api_key']);
+            // Индекс для быстрого поиска по бирже
+            $table->index('exchange_id');
         });
     }
 

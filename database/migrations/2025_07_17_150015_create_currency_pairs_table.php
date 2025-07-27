@@ -16,7 +16,13 @@ return new class extends Migration
             $table->string('symbol')->unique(); // Например, BTCUSDT
             $table->string('base_currency'); // BTC
             $table->string('quote_currency'); // USDT
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
+
+            // Индексы для быстрого поиска
+            $table->index('base_currency');
+            $table->index('quote_currency');
+            $table->index('is_active');
         });
     }
 

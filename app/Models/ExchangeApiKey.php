@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Crypt;
 
 class ExchangeApiKey extends Model
 {
@@ -11,22 +12,34 @@ class ExchangeApiKey extends Model
         'exchange_id',
         'api_key',
         'api_secret',
-        'additional_params',
-        'is_active',
-        'description',
-    ];
-
-    protected $casts = [
-        'is_active' => 'boolean',
-        'additional_params' => 'json',
     ];
 
     // Скрываем секретные данные из массивов/JSON
     protected $hidden = [
         'api_key',
         'api_secret',
-        'additional_params',
     ];
+
+    // Автоматическое шифрование/дешифрование
+    public function setApiKeyAttribute($value)
+    {
+        $this->attributes['api_key'] = Crypt::encryptString($value);
+    }
+
+    public function getApiKeyAttribute($value)
+    {
+        return $value ? Crypt::decryptString($value) : null;
+    }
+
+    public function setApiSecretAttribute($value)
+    {
+        $this->attributes['api_secret'] = Crypt::encryptString($value);
+    }
+
+    public function getApiSecretAttribute($value)
+    {
+        return $value ? Crypt::decryptString($value) : null;
+    }
 
     public function exchange(): BelongsTo
     {

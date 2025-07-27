@@ -9,6 +9,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Crypt;
 
 class ExchangeApiKeyResource extends Resource
 {
@@ -18,7 +19,7 @@ class ExchangeApiKeyResource extends Resource
 
     protected static ?string $navigationLabel = 'API Ключи';
 
-    protected static ?string $navigationGroup = 'Управление биржами';
+    // protected static ?string $navigationGroup = 'Управление биржами';
 
     public static function getModelLabel(): string
     {
@@ -45,21 +46,10 @@ class ExchangeApiKeyResource extends Resource
                 Forms\Components\TextInput::make('api_secret')
                     ->label('API Секрет')
                     ->required()
-                    ->password() // Скрываем ввод
-                    ->dehydrateStateUsing(fn($state) => encrypt($state)) // Шифруем перед сохранением
-                    ->dehydrated(fn($state) => filled($state))
+                    ->password()
                     ->maxLength(255),
-                Forms\Components\Textarea::make('additional_params')
-                    ->label('Дополнительные параметры (JSON)')
-                    ->helperText('Введите дополнительные параметры в формате JSON')
-                    ->json(),
-                Forms\Components\Toggle::make('is_active')
-                    ->label('Активен')
-                    ->default(true),
-                Forms\Components\Textarea::make('description')
-                    ->label('Описание')
-                    ->maxLength(65535),
-            ]);
+            ])
+            ->columns(1); // Вертикальное расположение для безопасности
     }
 
     public static function table(Table $table): Table
@@ -72,38 +62,31 @@ class ExchangeApiKeyResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('api_key')
                     ->label('API Ключ')
-                    ->searchable()
-                    ->formatStateUsing(fn(string $state): string => substr($state, 0, 4) . '...' . substr($state, -4)), // Показываем только часть ключа
-                Tables\Columns\IconColumn::make('is_active')
-                    ->label('Активен')
-                    ->boolean(),
-                Tables\Columns\TextColumn::make('description')
-                    ->label('Описание')
-                    ->limit(50),
+                    ->formatStateUsing(fn(string $state): string => '••••' . substr($state, -4)), // Показываем только последние 4 символа
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Создано')
                     ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->sortable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('exchange')
                     ->label('Биржа')
                     ->relationship('exchange', 'name'),
-                Tables\Filters\TernaryFilter::make('is_active')
-                    ->label('Активность')
-                    ->boolean()
-                    ->trueLabel('Только активные')
-                    ->falseLabel('Только неактивные')
-                    ->native(false),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->requiresConfirmation()
+                    ->modalHeading('Редактирование API ключа')
+                    ->modalDescription('Внимание! Вы редактируете секретные данные.'),
+                Tables\Actions\DeleteAction::make()
+                    ->requiresConfirmation()
+                    ->modalDescription('Внимание! Удаление ключа может нарушить работу системы.'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->requiresConfirmation()
+                        ->modalDescription('Внимание! Удаление ключей может нарушить работу системы.'),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');

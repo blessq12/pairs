@@ -11,7 +11,31 @@ class CurrencyPair extends Model
         'symbol',
         'base_currency',
         'quote_currency',
+        'is_active',
     ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::saving(function ($model) {
+            $model->symbol = strtoupper($model->base_currency . $model->quote_currency);
+        });
+    }
+
+    public function setBaseCurrencyAttribute($value)
+    {
+        $this->attributes['base_currency'] = strtoupper($value);
+    }
+
+    public function setQuoteCurrencyAttribute($value)
+    {
+        $this->attributes['quote_currency'] = strtoupper($value);
+    }
 
     public function prices(): HasMany
     {
