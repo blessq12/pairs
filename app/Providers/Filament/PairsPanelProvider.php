@@ -49,7 +49,7 @@ class PairsPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
-            ->brandName('Управление биржами')
+            // ->brandName('Управление биржами')
             ->navigationGroups([
                 'Управление биржами',
             ]);
