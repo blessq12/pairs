@@ -21,6 +21,44 @@ class SettingResource extends Resource
     {
         return $form
             ->schema([
+                Forms\Components\Section::make('Парсеры бирж')
+                    ->description('Настройки для парсеров API бирж')
+                    ->schema([
+                        Forms\Components\TextInput::make('parser_timeout')
+                            ->label('Таймаут запроса (секунды)')
+                            ->numeric()
+                            ->minValue(1)
+                            ->required(),
+                        Forms\Components\TextInput::make('parser_connect_timeout')
+                            ->label('Таймаут соединения (секунды)')
+                            ->numeric()
+                            ->minValue(1)
+                            ->required(),
+                        Forms\Components\TextInput::make('parser_retry_attempts')
+                            ->label('Количество попыток')
+                            ->numeric()
+                            ->minValue(1)
+                            ->required(),
+                        Forms\Components\TextInput::make('parser_retry_delay')
+                            ->label('Задержка между попытками (мс)')
+                            ->numeric()
+                            ->minValue(100)
+                            ->step(100)
+                            ->required(),
+                        Forms\Components\TextInput::make('parser_kline_limit')
+                            ->label('Лимит свечей')
+                            ->numeric()
+                            ->minValue(10)
+                            ->required(),
+                        Forms\Components\TextInput::make('parser_default_interval')
+                            ->label('Интервал по умолчанию')
+                            ->required(),
+                        Forms\Components\TagsInput::make('parser_allowed_intervals')
+                            ->label('Разрешенные интервалы')
+                            ->separator(',')
+                            ->required(),
+                    ])->columnSpan(2),
+
                 Forms\Components\Section::make('API')
                     ->schema([
                         Forms\Components\TextInput::make('poll_interval')
@@ -98,6 +136,24 @@ class SettingResource extends Resource
     {
         return $table
             ->columns([
+                // Parser Settings
+                Tables\Columns\TextColumn::make('parser_timeout')
+                    ->label('Таймаут парсера')
+                    ->suffix(' сек')
+                    ->numeric()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('parser_retry_attempts')
+                    ->label('Попытки парсера')
+                    ->numeric()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('parser_kline_limit')
+                    ->label('Лимит свечей')
+                    ->numeric()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('parser_default_interval')
+                    ->label('Интервал')
+                    ->toggleable(),
+
                 // API Settings
                 Tables\Columns\TextColumn::make('poll_interval')
                     ->label('Интервал опроса')

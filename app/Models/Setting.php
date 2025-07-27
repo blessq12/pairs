@@ -10,6 +10,15 @@ class Setting extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
+        // Parser settings
+        'parser_timeout' => 'integer',
+        'parser_connect_timeout' => 'integer',
+        'parser_retry_attempts' => 'integer',
+        'parser_retry_delay' => 'integer',
+        'parser_kline_limit' => 'integer',
+        'parser_allowed_intervals' => 'array',
+
+        // Existing settings
         'poll_interval' => 'integer',
         'api_timeout' => 'integer',
         'retry_attempts' => 'integer',
