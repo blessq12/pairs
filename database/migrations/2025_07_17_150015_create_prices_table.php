@@ -4,6 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 return new class extends Migration
 {
@@ -42,52 +43,55 @@ return new class extends Migration
             )
         ");
 
-        // Создаем Event для автоматического создания партиций на следующий месяц
-        DB::unprepared('
-            CREATE EVENT IF NOT EXISTS manage_price_partitions
-            ON SCHEDULE EVERY 1 DAY
-            DO BEGIN
-                -- Удаляем старые партиции (старше 3 месяцев)
-                SET @drop_partition_sql = (
-                    SELECT CONCAT("ALTER TABLE prices DROP PARTITION ", GROUP_CONCAT(partition_name))
-                    FROM information_schema.partitions
-                    WHERE table_name = "prices"
-                    AND partition_name != "p_future"
-                    AND partition_name != "p_current"
-                    AND partition_description < UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL 3 MONTH))
-                );
-                IF @drop_partition_sql IS NOT NULL THEN
-                    PREPARE stmt FROM @drop_partition_sql;
-                    EXECUTE stmt;
-                    DEALLOCATE PREPARE stmt;
-                END IF;
-
-                -- Создаем партицию на следующий месяц если её ещё нет
-                SET @next_month_start = DATE_FORMAT(DATE_ADD(NOW(), INTERVAL 1 MONTH), "%Y-%m-01 00:00:00");
-                SET @partition_name = CONCAT("p_", DATE_FORMAT(@next_month_start, "%Y%m"));
-
-                -- Проверяем существует ли уже такая партиция
-                IF NOT EXISTS (
-                    SELECT 1 FROM information_schema.partitions
-                    WHERE table_name = "prices"
-                    AND partition_name = @partition_name
-                ) THEN
-                    -- Создаем новую партицию
-                    SET @next_month_end = DATE_FORMAT(DATE_ADD(@next_month_start, INTERVAL 1 MONTH), "%Y-%m-01 00:00:00");
-                    SET @partition_sql = CONCAT(
-                        "ALTER TABLE prices REORGANIZE PARTITION p_future INTO (",
-                        "PARTITION ", @partition_name, " VALUES LESS THAN (UNIX_TIMESTAMP(\'", @next_month_end, "\')),",
-                        "PARTITION p_future VALUES LESS THAN MAXVALUE)"
+        // Проверяем, есть ли права на создание Event
+        try {
+            // Создаем Event для автоматического создания партиций на следующий месяц
+            DB::unprepared('
+                CREATE EVENT IF NOT EXISTS manage_price_partitions
+                ON SCHEDULE EVERY 1 DAY
+                DO BEGIN
+                    -- Удаляем старые партиции (старше 3 месяцев)
+                    SET @drop_partition_sql = (
+                        SELECT CONCAT("ALTER TABLE prices DROP PARTITION ", GROUP_CONCAT(partition_name))
+                        FROM information_schema.partitions
+                        WHERE table_name = "prices"
+                        AND partition_name != "p_future"
+                        AND partition_name != "p_current"
+                        AND partition_description < UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL 3 MONTH))
                     );
-                    PREPARE stmt FROM @partition_sql;
-                    EXECUTE stmt;
-                    DEALLOCATE PREPARE stmt;
-                END IF;
-            END
-        ');
+                    IF @drop_partition_sql IS NOT NULL THEN
+                        PREPARE stmt FROM @drop_partition_sql;
+                        EXECUTE stmt;
+                        DEALLOCATE PREPARE stmt;
+                    END IF;
 
-        // Включаем Event Scheduler если он выключен
-        DB::statement('SET GLOBAL event_scheduler = ON');
+                    -- Создаем партицию на следующий месяц если её ещё нет
+                    SET @next_month_start = DATE_FORMAT(DATE_ADD(NOW(), INTERVAL 1 MONTH), "%Y-%m-01 00:00:00");
+                    SET @partition_name = CONCAT("p_", DATE_FORMAT(@next_month_start, "%Y%m"));
+
+                    -- Проверяем существует ли уже такая партиция
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.partitions
+                        WHERE table_name = "prices"
+                        AND partition_name = @partition_name
+                    ) THEN
+                        -- Создаем новую партицию
+                        SET @next_month_end = DATE_FORMAT(DATE_ADD(@next_month_start, INTERVAL 1 MONTH), "%Y-%m-01 00:00:00");
+                        SET @partition_sql = CONCAT(
+                            "ALTER TABLE prices REORGANIZE PARTITION p_future INTO (",
+                            "PARTITION ", @partition_name, " VALUES LESS THAN (UNIX_TIMESTAMP(\'", @next_month_end, "\')),",
+                            "PARTITION p_future VALUES LESS THAN MAXVALUE)"
+                        );
+                        PREPARE stmt FROM @partition_sql;
+                        EXECUTE stmt;
+                        DEALLOCATE PREPARE stmt;
+                    END IF;
+                END
+            ');
+        } catch (\Exception $e) {
+            // Если нет прав на создание Event, логируем это
+            Log::warning('Could not create price partitioning event. You will need to manage partitions manually: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -95,8 +99,12 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Удаляем Event
-        DB::unprepared('DROP EVENT IF EXISTS manage_price_partitions');
+        try {
+            // Пытаемся удалить Event
+            DB::unprepared('DROP EVENT IF EXISTS manage_price_partitions');
+        } catch (\Exception $e) {
+            // Игнорируем ошибку, если нет прав
+        }
 
         // Удаляем таблицу
         Schema::dropIfExists('prices');
