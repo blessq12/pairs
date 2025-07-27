@@ -2,6 +2,7 @@
 
 namespace App\Parsers;
 
+use App\Enums\KlineInterval;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Support\Facades\Log;
@@ -102,11 +103,9 @@ abstract class BaseExchangeParser implements ExchangeParserInterface
      */
     protected function validateInterval(string $interval): void
     {
-        $allowedIntervals = json_decode($this->settings['parser_allowed_intervals'], true);
-
-        if (!in_array($interval, $allowedIntervals)) {
+        if (!in_array($interval, KlineInterval::values())) {
             throw new ExchangeParserException(
-                "Unsupported interval: {$interval}. Allowed intervals: " . implode(', ', $allowedIntervals)
+                "Unsupported interval: {$interval}. Allowed intervals: " . implode(', ', KlineInterval::values())
             );
         }
     }

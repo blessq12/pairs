@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use App\Enums\KlineInterval;
 
 return new class extends Migration
 {
@@ -19,9 +20,7 @@ return new class extends Migration
             $table->integer('parser_kline_limit')->default(100);
 
             // Форматы
-            $table->string('parser_default_interval')->default('1m');
-            $table->json('parser_allowed_intervals')
-                ->default(json_encode(['1m', '5m', '15m', '30m', '1h', '4h', '1d']));
+            $table->enum('parser_default_interval', KlineInterval::values())->default(KlineInterval::ONE_MINUTE->value);
         });
     }
 
@@ -35,7 +34,6 @@ return new class extends Migration
                 'parser_retry_delay',
                 'parser_kline_limit',
                 'parser_default_interval',
-                'parser_allowed_intervals',
             ]);
         });
     }

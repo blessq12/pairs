@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\KlineInterval;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
@@ -16,7 +17,7 @@ class Setting extends Model
         'parser_retry_attempts' => 'integer',
         'parser_retry_delay' => 'integer',
         'parser_kline_limit' => 'integer',
-        'parser_allowed_intervals' => 'array',
+        'parser_default_interval' => KlineInterval::class,
 
         // Existing settings
         'poll_interval' => 'integer',

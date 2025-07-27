@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\KlineInterval;
 use App\Filament\Resources\SettingResource\Pages;
 use App\Models\Setting;
 use Filament\Forms;
@@ -50,12 +51,9 @@ class SettingResource extends Resource
                             ->numeric()
                             ->minValue(10)
                             ->required(),
-                        Forms\Components\TextInput::make('parser_default_interval')
+                        Forms\Components\Select::make('parser_default_interval')
                             ->label('Интервал по умолчанию')
-                            ->required(),
-                        Forms\Components\TagsInput::make('parser_allowed_intervals')
-                            ->label('Разрешенные интервалы')
-                            ->separator(',')
+                            ->options(collect(KlineInterval::cases())->mapWithKeys(fn($interval) => [$interval->value => $interval->label()]))
                             ->required(),
                     ])->columnSpan(2),
 
@@ -152,6 +150,7 @@ class SettingResource extends Resource
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('parser_default_interval')
                     ->label('Интервал')
+                    ->formatStateUsing(fn(KlineInterval $state) => $state->label())
                     ->toggleable(),
 
                 // API Settings
