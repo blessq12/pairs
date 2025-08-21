@@ -14,8 +14,9 @@ class TelegramService
 
     public function __construct()
     {
-        $this->botToken = config('services.telegram.bot_token', '');
-        $this->chatId = config('services.telegram.chat_id', '');
+        // Получаем токен и chat_id из настроек, если нет - используем конфиг как fallback
+        $this->botToken = Setting::get('telegram_bot_token', config('services.telegram.bot_token', ''));
+        $this->chatId = Setting::get('telegram_chat_id', config('services.telegram.chat_id', ''));
         $this->messageTemplate = Setting::get('telegram_message_template', 'Пара {pair}: профит {profit}% на {exchange}');
     }
 
@@ -67,6 +68,19 @@ class TelegramService
     }
 
     /**
+     * Отправляет сводку всех арбитражных возможностей одним сообщением
+     */
+    public function sendArbitrageSummary(array $opportunities): bool
+    {
+        if (empty($opportunities)) {
+            return true; // Нечего отправлять
+        }
+
+        $message = $this->formatArbitrageSummary($opportunities);
+        return $this->sendMessage($message);
+    }
+
+    /**
      * Форматирует сообщение об арбитражной возможности
      */
     private function formatArbitrageMessage(array $opportunity): string
@@ -94,6 +108,41 @@ class TelegramService
         $message .= "   • {$sellExchange}: \${$volumeSell}\n";
         $message .= "   • Минимум: \${$minVolume}\n\n";
         $message .= "⏰ <b>Обнаружено:</b> " . now()->format('H:i:s') . "\n\n";
+        $message .= "🔗 <b>Действуй быстро!</b>";
+
+        return $message;
+    }
+
+    /**
+     * Форматирует сводку всех арбитражных возможностей
+     */
+    private function formatArbitrageSummary(array $opportunities): string
+    {
+        $totalCount = count($opportunities);
+        $totalProfit = array_sum(array_column($opportunities, 'profit_usd'));
+        $avgProfit = $totalCount > 0 ? $totalProfit / $totalCount : 0;
+
+        $message = "🚨 <b>АРБИТРАЖНЫЕ ВОЗМОЖНОСТИ</b>\n\n";
+        $message .= "📊 <b>Общая статистика:</b>\n";
+        $message .= "   • Найдено возможностей: {$totalCount}\n";
+        $message .= "   • Общий профит: \$" . round($totalProfit, 2) . "\n";
+        $message .= "   • Средний профит: \$" . round($avgProfit, 2) . "\n\n";
+        $message .= "📋 <b>Детали по возможностям:</b>\n\n";
+
+        foreach ($opportunities as $index => $opportunity) {
+            $buyExchange = \App\Models\Exchange::find($opportunity['buy_exchange_id'])->name;
+            $sellExchange = \App\Models\Exchange::find($opportunity['sell_exchange_id'])->name;
+            $pair = $opportunity['base_currency'] . '/' . $opportunity['quote_currency'];
+            $netProfit = round($opportunity['net_profit_percent'], 2);
+            $profitUsd = round($opportunity['profit_usd'], 2);
+
+            $message .= ($index + 1) . ". <b>{$pair}</b>\n";
+            $message .= "   💰 Профит: {$netProfit}% (\$" . $profitUsd . ")\n";
+            $message .= "   🛒 {$buyExchange} → 🛍️ {$sellExchange}\n";
+            $message .= "   💵 Цены: \$" . $opportunity['buy_price'] . " → \$" . $opportunity['sell_price'] . "\n\n";
+        }
+
+        $message .= "⏰ <b>Обнаружено:</b> " . now()->format('H:i:s') . "\n";
         $message .= "🔗 <b>Действуй быстро!</b>";
 
         return $message;
@@ -129,5 +178,55 @@ class TelegramService
     public function isConfigured(): bool
     {
         return !empty($this->botToken) && !empty($this->chatId);
+    }
+
+    /**
+     * Обновляет настройки Telegram
+     */
+    public function updateSettings(string $botToken, string $chatId, ?string $messageTemplate = null): bool
+    {
+        try {
+            Setting::set('telegram_bot_token', $botToken);
+            Setting::set('telegram_chat_id', $chatId);
+
+            if ($messageTemplate !== null) {
+                Setting::set('telegram_message_template', $messageTemplate);
+            }
+
+            // Обновляем текущие значения
+            $this->botToken = $botToken;
+            $this->chatId = $chatId;
+            if ($messageTemplate !== null) {
+                $this->messageTemplate = $messageTemplate;
+            }
+
+            // Очищаем кэш настроек
+            Setting::flushCache();
+
+            Log::info('Настройки Telegram обновлены', [
+                'bot_token_length' => strlen($botToken),
+                'chat_id' => $chatId,
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Ошибка при обновлении настроек Telegram', [
+                'exception' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Получает текущие настройки Telegram
+     */
+    public function getSettings(): array
+    {
+        return [
+            'bot_token' => $this->botToken ? '***' . substr($this->botToken, -4) : '',
+            'chat_id' => $this->chatId,
+            'message_template' => $this->messageTemplate,
+            'is_configured' => $this->isConfigured(),
+        ];
     }
 }

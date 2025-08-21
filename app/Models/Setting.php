@@ -15,6 +15,11 @@ class Setting extends Model
         'price_history_days' => 'integer',
         'price_cleanup_enabled' => 'boolean',
 
+        // Telegram settings
+        'telegram_bot_token' => 'string',
+        'telegram_chat_id' => 'string',
+        'telegram_message_template' => 'string',
+
         // Arbitrage settings
         'min_profit_percent' => 'float',
         'min_volume_usd' => 'float',

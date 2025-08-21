@@ -22,9 +22,7 @@ return new class extends Migration
             // Теперь удаляем колонку
             $table->dropColumn('currency_pair_id');
 
-            // Добавляем новые индексы
-            $table->unique(['exchange_id', 'base_currency', 'quote_currency']);
-            $table->index(['base_currency', 'quote_currency', 'is_active']);
+            // Индексы уже существуют в исходной миграции, поэтому не добавляем их снова
         });
     }
 
