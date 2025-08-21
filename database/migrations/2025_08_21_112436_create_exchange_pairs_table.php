@@ -14,7 +14,8 @@ return new class extends Migration
         Schema::create('exchange_pairs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('exchange_id')->constrained()->onDelete('cascade');
-            $table->foreignId('currency_pair_id')->constrained()->onDelete('cascade');
+            $table->string('base_currency', 10); // Базовая валюта (например, BTC)
+            $table->string('quote_currency', 10); // Котируемая валюта (например, USDT)
             $table->string('symbol_on_exchange'); // Как пара называется на бирже (например, BTCUSDT)
             $table->boolean('is_active')->default(true);
             $table->decimal('min_amount', 20, 8)->nullable(); // Минимальный объем для торговли
@@ -22,12 +23,12 @@ return new class extends Migration
             $table->decimal('taker_fee', 8, 6)->nullable(); // Комиссия тейкера
             $table->timestamps();
 
-            // Уникальный индекс для пары биржа+пара
-            $table->unique(['exchange_id', 'currency_pair_id']);
+            // Уникальный индекс для пары биржа+базовая+котируемая
+            $table->unique(['exchange_id', 'base_currency', 'quote_currency']);
 
             // Индексы для быстрого поиска
             $table->index(['exchange_id', 'is_active']);
-            $table->index(['currency_pair_id', 'is_active']);
+            $table->index(['base_currency', 'quote_currency', 'is_active']);
         });
     }
 

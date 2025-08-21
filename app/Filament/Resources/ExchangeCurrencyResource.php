@@ -23,6 +23,7 @@ class ExchangeCurrencyResource extends Resource
     protected static ?string $navigationLabel = 'Валюты бирж';
     protected static ?string $modelLabel = 'Валюта биржи';
     protected static ?string $pluralModelLabel = 'Валюты бирж';
+    protected static ?string $navigationGroup = 'Биржи';
 
     public static function form(Form $form): Form
     {
@@ -94,13 +95,13 @@ class ExchangeCurrencyResource extends Resource
                     Tables\Actions\BulkAction::make('activate')
                         ->label('Активировать')
                         ->icon('heroicon-o-check-circle')
-                        ->action(fn (Collection $records) => $records->each->update(['is_active' => true]))
+                        ->action(fn(Collection $records) => $records->each->update(['is_active' => true]))
                         ->requiresConfirmation(),
 
                     Tables\Actions\BulkAction::make('deactivate')
                         ->label('Деактивировать')
                         ->icon('heroicon-o-x-circle')
-                        ->action(fn (Collection $records) => $records->each->update(['is_active' => false]))
+                        ->action(fn(Collection $records) => $records->each->update(['is_active' => false]))
                         ->requiresConfirmation(),
 
                     Tables\Actions\DeleteBulkAction::make(),

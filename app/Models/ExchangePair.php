@@ -12,7 +12,8 @@ class ExchangePair extends Model
 
     protected $fillable = [
         'exchange_id',
-        'currency_pair_id',
+        'base_currency',
+        'quote_currency',
         'symbol_on_exchange',
         'is_active',
         'min_amount',
@@ -36,11 +37,11 @@ class ExchangePair extends Model
     }
 
     /**
-     * Отношение к валютной паре
+     * Получить символ пары
      */
-    public function currencyPair(): BelongsTo
+    public function getSymbolAttribute(): string
     {
-        return $this->belongsTo(CurrencyPair::class);
+        return strtoupper($this->base_currency . $this->quote_currency);
     }
 
     /**
@@ -50,18 +51,7 @@ class ExchangePair extends Model
     {
         return static::where('exchange_id', $exchangeId)
             ->where('is_active', true)
-            ->with(['currencyPair', 'exchange'])
-            ->get();
-    }
-
-    /**
-     * Получить активные пары для валютной пары
-     */
-    public static function getActiveForPair(int $pairId): \Illuminate\Database\Eloquent\Collection
-    {
-        return static::where('currency_pair_id', $pairId)
-            ->where('is_active', true)
-            ->with(['currencyPair', 'exchange'])
+            ->with('exchange')
             ->get();
     }
 
@@ -71,28 +61,17 @@ class ExchangePair extends Model
     public static function getAllActive(): \Illuminate\Database\Eloquent\Collection
     {
         return static::where('is_active', true)
-            ->with(['currencyPair', 'exchange'])
+            ->with('exchange')
             ->get();
     }
 
     /**
-     * Получить активные пары для арбитража (сгруппированные по валютной паре)
+     * Получить активные пары для арбитража
      */
     public static function getActiveForArbitrage(): \Illuminate\Database\Eloquent\Collection
     {
         return static::where('is_active', true)
-            ->with(['currencyPair', 'exchange'])
-            ->get();
-    }
-
-    /**
-     * Получить пары для арбитража по конкретной валютной паре
-     */
-    public static function getPairsForArbitrage(int $currencyPairId): \Illuminate\Database\Eloquent\Collection
-    {
-        return static::where('currency_pair_id', $currencyPairId)
-            ->where('is_active', true)
-            ->with(['currencyPair', 'exchange'])
+            ->with('exchange')
             ->get();
     }
 
@@ -103,28 +82,30 @@ class ExchangePair extends Model
     {
         return static::where('exchange_id', $exchangeId)
             ->where('is_active', true)
-            ->with(['currencyPair', 'exchange'])
+            ->with('exchange')
             ->get();
     }
 
     /**
-     * Получить пары для арбитража по валютной паре
+     * Получить пары для конкретной валютной пары на всех биржах
      */
-    public static function getPairsByCurrencyPair(int $pairId): \Illuminate\Database\Eloquent\Collection
+    public static function getPairsBySymbol(string $baseCurrency, string $quoteCurrency): \Illuminate\Database\Eloquent\Collection
     {
-        return static::where('currency_pair_id', $pairId)
+        return static::where('base_currency', strtoupper($baseCurrency))
+            ->where('quote_currency', strtoupper($quoteCurrency))
             ->where('is_active', true)
-            ->with(['currencyPair', 'exchange'])
+            ->with('exchange')
             ->get();
     }
 
     /**
      * Проверить существует ли пара на бирже
      */
-    public static function existsOnExchange(int $exchangeId, int $pairId): bool
+    public static function existsOnExchange(int $exchangeId, string $baseCurrency, string $quoteCurrency): bool
     {
         return static::where('exchange_id', $exchangeId)
-            ->where('currency_pair_id', $pairId)
+            ->where('base_currency', strtoupper($baseCurrency))
+            ->where('quote_currency', strtoupper($quoteCurrency))
             ->where('is_active', true)
             ->exists();
     }
@@ -135,12 +116,33 @@ class ExchangePair extends Model
     public static function getPairsWithVolume(float $minVolume = null): \Illuminate\Database\Eloquent\Collection
     {
         $query = static::where('is_active', true)
-            ->with(['currencyPair', 'exchange']);
+            ->with('exchange');
 
         if ($minVolume !== null) {
             $query->where('min_amount', '>=', $minVolume);
         }
 
         return $query->get();
+    }
+
+    /**
+     * Получить все активные пары для арбитража (основной метод)
+     */
+    public static function getActivePairsForArbitrage(): \Illuminate\Database\Eloquent\Collection
+    {
+        return static::where('is_active', true)
+            ->with('exchange')
+            ->get();
+    }
+
+    /**
+     * Получить пары для конкретной биржи
+     */
+    public static function getPairsForExchange(int $exchangeId): \Illuminate\Database\Eloquent\Collection
+    {
+        return static::where('exchange_id', $exchangeId)
+            ->where('is_active', true)
+            ->with('exchange')
+            ->get();
     }
 }

@@ -16,6 +16,9 @@ class ExchangeResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-building-library';
 
+    protected static ?string $navigationGroup = 'Биржи';
+
+
     public static function getModelLabel(): string
     {
         return __('filament/resources.resources.exchange.label');

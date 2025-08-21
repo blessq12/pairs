@@ -11,7 +11,8 @@ class ArbitrageOpportunity extends Model
     protected $fillable = [
         'buy_exchange_id',
         'sell_exchange_id',
-        'currency_pair_id',
+        'base_currency',
+        'quote_currency',
         'buy_price',
         'sell_price',
         'profit_percent',
@@ -131,8 +132,11 @@ class ArbitrageOpportunity extends Model
         return $this->belongsTo(Exchange::class, 'sell_exchange_id');
     }
 
-    public function currencyPair(): BelongsTo
+    /**
+     * Получить символ пары
+     */
+    public function getSymbolAttribute(): string
     {
-        return $this->belongsTo(CurrencyPair::class);
+        return strtoupper($this->base_currency . $this->quote_currency);
     }
 }

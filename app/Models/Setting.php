@@ -11,24 +11,9 @@ class Setting extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
-        // Parser settings
-        'parser_timeout' => 'integer',
-        'parser_connect_timeout' => 'integer',
-        'parser_retry_attempts' => 'integer',
-        'parser_retry_delay' => 'integer',
-        'parser_kline_limit' => 'integer',
-        'parser_default_interval' => KlineInterval::class,
-
         // Existing settings
-        'poll_interval' => 'integer',
-        'api_timeout' => 'integer',
-        'retry_attempts' => 'integer',
-        'profit_threshold' => 'float',
-        'notification_enabled' => 'boolean',
         'price_history_days' => 'integer',
         'price_cleanup_enabled' => 'boolean',
-        'dashboard_refresh_interval' => 'integer',
-        'top_pairs_limit' => 'integer',
 
         // Arbitrage settings
         'min_profit_percent' => 'float',

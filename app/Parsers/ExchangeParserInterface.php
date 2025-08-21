@@ -37,4 +37,12 @@ interface ExchangeParserInterface
      * @throws \App\Exceptions\ExchangeParserException
      */
     public function getAllSymbols(): array;
+
+    /**
+     * Получает список всех доступных валют на бирже
+     *
+     * @return array<string> Массив символов валют (например, ['BTC', 'ETH', 'USDT'])
+     * @throws \App\Exceptions\ExchangeParserException
+     */
+    public function getAllCurrencies(): array;
 }

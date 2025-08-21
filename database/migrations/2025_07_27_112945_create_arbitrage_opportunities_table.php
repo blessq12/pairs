@@ -17,7 +17,8 @@ return new class extends Migration
             // Exchange and Pair Info
             $table->unsignedBigInteger('buy_exchange_id')->comment('Биржа для покупки');
             $table->unsignedBigInteger('sell_exchange_id')->comment('Биржа для продажи');
-            $table->unsignedBigInteger('currency_pair_id')->comment('Валютная пара');
+            $table->string('base_currency', 10)->comment('Базовая валюта');
+            $table->string('quote_currency', 10)->comment('Котируемая валюта');
 
             // Price Information
             $table->decimal('buy_price', 16, 8)->comment('Цена покупки');
@@ -43,7 +44,7 @@ return new class extends Migration
             $table->timestamp('expired_at')->nullable()->comment('Время истечения возможности');
 
             // Indexes
-            $table->index(['buy_exchange_id', 'sell_exchange_id', 'currency_pair_id'], 'arbitrage_exchanges_pair');
+            $table->index(['buy_exchange_id', 'sell_exchange_id', 'base_currency', 'quote_currency'], 'arbitrage_exchanges_pair');
             $table->index('profit_percent');
             $table->index('detected_at');
             $table->index('is_active');
@@ -51,7 +52,6 @@ return new class extends Migration
             // Foreign Keys
             $table->foreign('buy_exchange_id')->references('id')->on('exchanges')->onDelete('cascade');
             $table->foreign('sell_exchange_id')->references('id')->on('exchanges')->onDelete('cascade');
-            $table->foreign('currency_pair_id')->references('id')->on('currency_pairs')->onDelete('cascade');
         });
     }
 

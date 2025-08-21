@@ -6,7 +6,7 @@ use App\Filament\Resources\ExchangePairResource\Pages;
 use App\Filament\Resources\ExchangePairResource\RelationManagers;
 use App\Models\ExchangePair;
 use App\Models\Exchange;
-use App\Models\CurrencyPair;
+use App\Models\ExchangeCurrency;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -24,6 +24,7 @@ class ExchangePairResource extends Resource
     protected static ?string $navigationLabel = 'Пары для арбитража';
     protected static ?string $modelLabel = 'Пара для арбитража';
     protected static ?string $pluralModelLabel = 'Пары для арбитража';
+    protected static ?string $navigationGroup = 'Арбитраж';
 
     public static function form(Form $form): Form
     {
@@ -35,9 +36,21 @@ class ExchangePairResource extends Resource
                     ->required()
                     ->searchable(),
 
-                Forms\Components\Select::make('currency_pair_id')
-                    ->label('Валютная пара')
-                    ->options(CurrencyPair::where('is_active', true)->pluck('symbol', 'id'))
+                Forms\Components\Select::make('base_currency')
+                    ->label('Базовая валюта')
+                    ->options(function () {
+                        $currencies = ExchangeCurrency::getAllUniqueCurrencies();
+                        return array_combine($currencies, $currencies);
+                    })
+                    ->required()
+                    ->searchable(),
+
+                Forms\Components\Select::make('quote_currency')
+                    ->label('Котируемая валюта')
+                    ->options(function () {
+                        $currencies = ExchangeCurrency::getAllUniqueCurrencies();
+                        return array_combine($currencies, $currencies);
+                    })
                     ->required()
                     ->searchable(),
 
@@ -45,7 +58,18 @@ class ExchangePairResource extends Resource
                     ->label('Символ на бирже')
                     ->required()
                     ->maxLength(20)
-                    ->helperText('Например: BTCUSDT, ETHBTC'),
+                    ->helperText('Например: BTCUSDT, ETHBTC')
+                    ->default(function () {
+                        return '';
+                    })
+                    ->reactive()
+                    ->afterStateUpdated(function ($state, $set, $get) {
+                        $baseCurrency = $get('base_currency');
+                        $quoteCurrency = $get('quote_currency');
+                        if ($baseCurrency && $quoteCurrency) {
+                            $set('symbol_on_exchange', $baseCurrency . $quoteCurrency);
+                        }
+                    }),
 
                 Forms\Components\Toggle::make('is_active')
                     ->label('Активна')
@@ -80,8 +104,19 @@ class ExchangePairResource extends Resource
                     ->sortable()
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('currencyPair.symbol')
-                    ->label('Валютная пара')
+                Tables\Columns\TextColumn::make('base_currency')
+                    ->label('Базовая валюта')
+                    ->sortable()
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('quote_currency')
+                    ->label('Котируемая валюта')
+                    ->sortable()
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('symbol')
+                    ->label('Пара')
+                    ->formatStateUsing(fn(ExchangePair $record): string => $record->base_currency . '/' . $record->quote_currency)
                     ->sortable()
                     ->searchable(),
 
@@ -112,7 +147,7 @@ class ExchangePairResource extends Resource
                         decimalSeparator: '.',
                         thousandsSeparator: ',',
                     )
-                    ->formatStateUsing(fn ($state) => $state ? ($state * 100) . '%' : '-'),
+                    ->formatStateUsing(fn($state) => $state ? ($state * 100) . '%' : '-'),
 
                 Tables\Columns\TextColumn::make('taker_fee')
                     ->label('Тейкер')
@@ -121,7 +156,7 @@ class ExchangePairResource extends Resource
                         decimalSeparator: '.',
                         thousandsSeparator: ',',
                     )
-                    ->formatStateUsing(fn ($state) => $state ? ($state * 100) . '%' : '-'),
+                    ->formatStateUsing(fn($state) => $state ? ($state * 100) . '%' : '-'),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Создано')
@@ -134,9 +169,19 @@ class ExchangePairResource extends Resource
                     ->label('Биржа')
                     ->options(Exchange::pluck('name', 'id')),
 
-                Tables\Filters\SelectFilter::make('currency_pair_id')
-                    ->label('Валютная пара')
-                    ->options(CurrencyPair::pluck('symbol', 'id')),
+                Tables\Filters\SelectFilter::make('base_currency')
+                    ->label('Базовая валюта')
+                    ->options(function () {
+                        $currencies = ExchangeCurrency::getAllUniqueCurrencies();
+                        return array_combine($currencies, $currencies);
+                    }),
+
+                Tables\Filters\SelectFilter::make('quote_currency')
+                    ->label('Котируемая валюта')
+                    ->options(function () {
+                        $currencies = ExchangeCurrency::getAllUniqueCurrencies();
+                        return array_combine($currencies, $currencies);
+                    }),
 
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Статус')
@@ -153,20 +198,20 @@ class ExchangePairResource extends Resource
                     Tables\Actions\BulkAction::make('activate')
                         ->label('Активировать')
                         ->icon('heroicon-o-check-circle')
-                        ->action(fn (Collection $records) => $records->each->update(['is_active' => true]))
+                        ->action(fn(Collection $records) => $records->each->update(['is_active' => true]))
                         ->requiresConfirmation(),
 
                     Tables\Actions\BulkAction::make('deactivate')
                         ->label('Деактивировать')
                         ->icon('heroicon-o-x-circle')
-                        ->action(fn (Collection $records) => $records->each->update(['is_active' => false]))
+                        ->action(fn(Collection $records) => $records->each->update(['is_active' => false]))
                         ->requiresConfirmation(),
 
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('exchange_id')
-            ->defaultSort('currency_pair_id');
+            ->defaultSort('base_currency');
     }
 
     public static function getRelations(): array

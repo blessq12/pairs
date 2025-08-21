@@ -62,10 +62,7 @@ class Exchange extends Model
         $this->attributes['kline_api_url'] = $value ? Crypt::encryptString($value) : null;
     }
 
-    public function prices(): HasMany
-    {
-        return $this->hasMany(Price::class);
-    }
+
 
     public function apiKeys(): HasMany
     {

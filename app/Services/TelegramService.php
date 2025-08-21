@@ -74,7 +74,7 @@ class TelegramService
         // Получаем названия бирж из ID
         $buyExchange = \App\Models\Exchange::find($opportunity['buy_exchange_id'])->name;
         $sellExchange = \App\Models\Exchange::find($opportunity['sell_exchange_id'])->name;
-        $pair = \App\Models\CurrencyPair::find($opportunity['currency_pair_id'])->symbol;
+        $pair = $opportunity['base_currency'] . '/' . $opportunity['quote_currency'];
         $netProfit = round($opportunity['net_profit_percent'], 2);
         $profitUsd = round($opportunity['profit_usd'], 2);
         $buyPrice = $opportunity['buy_price'];

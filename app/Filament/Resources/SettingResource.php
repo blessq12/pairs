@@ -2,14 +2,11 @@
 
 namespace App\Filament\Resources;
 
-use App\Enums\KlineInterval;
 use App\Filament\Resources\SettingResource\Pages;
 use App\Models\Setting;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
-use Filament\Tables;
-use Filament\Tables\Table;
 
 class SettingResource extends Resource
 {
@@ -22,72 +19,9 @@ class SettingResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('Парсеры бирж')
-                    ->description('Настройки для парсеров API бирж')
-                    ->schema([
-                        Forms\Components\TextInput::make('parser_timeout')
-                            ->label('Таймаут запроса (секунды)')
-                            ->numeric()
-                            ->minValue(1)
-                            ->required(),
-                        Forms\Components\TextInput::make('parser_connect_timeout')
-                            ->label('Таймаут соединения (секунды)')
-                            ->numeric()
-                            ->minValue(1)
-                            ->required(),
-                        Forms\Components\TextInput::make('parser_retry_attempts')
-                            ->label('Количество попыток')
-                            ->numeric()
-                            ->minValue(1)
-                            ->required(),
-                        Forms\Components\TextInput::make('parser_retry_delay')
-                            ->label('Задержка между попытками (мс)')
-                            ->numeric()
-                            ->minValue(100)
-                            ->step(100)
-                            ->required(),
-                        Forms\Components\TextInput::make('parser_kline_limit')
-                            ->label('Лимит свечей')
-                            ->numeric()
-                            ->minValue(10)
-                            ->required(),
-                        Forms\Components\Select::make('parser_default_interval')
-                            ->label('Интервал по умолчанию')
-                            ->options(collect(KlineInterval::cases())->mapWithKeys(fn($interval) => [$interval->value => $interval->label()]))
-                            ->required(),
-                    ])->columnSpan(2),
 
-                Forms\Components\Section::make('API')
-                    ->schema([
-                        Forms\Components\TextInput::make('poll_interval')
-                            ->label('Интервал опроса API (секунды)')
-                            ->numeric()
-                            ->minValue(1)
-                            ->required(),
-                        Forms\Components\TextInput::make('api_timeout')
-                            ->label('Таймаут запросов к API (секунды)')
-                            ->numeric()
-                            ->minValue(1)
-                            ->required(),
-                        Forms\Components\TextInput::make('retry_attempts')
-                            ->label('Количество попыток повтора')
-                            ->numeric()
-                            ->minValue(1)
-                            ->required(),
-                    ]),
 
-                Forms\Components\Section::make('Уведомления')
-                    ->schema([
-                        Forms\Components\TextInput::make('profit_threshold')
-                            ->label('Минимальная разница ask/bid (%)')
-                            ->numeric()
-                            ->minValue(0.01)
-                            ->step(0.01)
-                            ->required(),
-                        Forms\Components\Toggle::make('notification_enabled')
-                            ->label('Включить уведомления')
-                            ->required(),
-                    ]),
+
 
                 Forms\Components\Section::make('Арбитраж')
                     ->schema([
@@ -168,122 +102,16 @@ class SettingResource extends Resource
                             ->required(),
                     ]),
 
-                Forms\Components\Section::make('Дашборд')
-                    ->schema([
-                        Forms\Components\TextInput::make('dashboard_refresh_interval')
-                            ->label('Интервал обновления (секунды)')
-                            ->numeric()
-                            ->minValue(1)
-                            ->required(),
-                        Forms\Components\TextInput::make('top_pairs_limit')
-                            ->label('Количество пар в TopPairs')
-                            ->numeric()
-                            ->minValue(1)
-                            ->required(),
-                    ]),
+
             ]);
     }
 
-    public static function table(Table $table): Table
-    {
-        return $table
-            ->columns([
-                // Parser Settings
-                Tables\Columns\TextColumn::make('parser_timeout')
-                    ->label('Таймаут парсера')
-                    ->suffix(' сек')
-                    ->numeric()
-                    ->toggleable(),
-                Tables\Columns\TextColumn::make('parser_retry_attempts')
-                    ->label('Попытки парсера')
-                    ->numeric()
-                    ->toggleable(),
-                Tables\Columns\TextColumn::make('parser_kline_limit')
-                    ->label('Лимит свечей')
-                    ->numeric()
-                    ->toggleable(),
-                Tables\Columns\TextColumn::make('parser_default_interval')
-                    ->label('Интервал')
-                    ->formatStateUsing(fn(KlineInterval $state) => $state->label())
-                    ->toggleable(),
 
-                // API Settings
-                Tables\Columns\TextColumn::make('poll_interval')
-                    ->label('Интервал опроса')
-                    ->suffix(' сек')
-                    ->numeric(),
-                Tables\Columns\TextColumn::make('api_timeout')
-                    ->label('Таймаут API')
-                    ->suffix(' сек')
-                    ->numeric(),
-                Tables\Columns\TextColumn::make('retry_attempts')
-                    ->label('Попытки повтора')
-                    ->numeric(),
-
-                // Notification Settings
-                Tables\Columns\TextColumn::make('profit_threshold')
-                    ->label('Порог профита')
-                    ->suffix('%')
-                    ->numeric(),
-                Tables\Columns\IconColumn::make('notification_enabled')
-                    ->label('Уведомления')
-                    ->boolean(),
-
-                // Arbitrage Settings
-                Tables\Columns\TextColumn::make('min_profit_percent')
-                    ->label('Мин. профит')
-                    ->suffix('%')
-                    ->numeric()
-                    ->toggleable(),
-                Tables\Columns\TextColumn::make('min_volume_usd')
-                    ->label('Мин. объём')
-                    ->prefix('$')
-                    ->numeric()
-                    ->toggleable(),
-                Tables\Columns\TextColumn::make('alert_cooldown_minutes')
-                    ->label('Cooldown')
-                    ->suffix(' мин')
-                    ->numeric()
-                    ->toggleable(),
-                Tables\Columns\TextColumn::make('poll_interval_minutes')
-                    ->label('Опрос')
-                    ->suffix(' мин')
-                    ->numeric()
-                    ->toggleable(),
-
-                // Data Storage Settings
-                Tables\Columns\TextColumn::make('price_history_days')
-                    ->label('Хранение цен')
-                    ->suffix(' дней')
-                    ->numeric(),
-                Tables\Columns\IconColumn::make('price_cleanup_enabled')
-                    ->label('Очистка цен')
-                    ->boolean(),
-
-                // Dashboard Settings
-                Tables\Columns\TextColumn::make('dashboard_refresh_interval')
-                    ->label('Обновление')
-                    ->suffix(' сек')
-                    ->numeric(),
-                Tables\Columns\TextColumn::make('top_pairs_limit')
-                    ->label('Топ пар')
-                    ->numeric(),
-
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Обновлено')
-                    ->dateTime()
-                    ->sortable(),
-            ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-            ]);
-    }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSettings::route('/'),
-            'edit' => Pages\EditSetting::route('/{record}/edit'),
+            'index' => Pages\EditSetting::route('/'),
         ];
     }
 }

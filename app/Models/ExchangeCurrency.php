@@ -70,4 +70,28 @@ class ExchangeCurrency extends Model
             ->with('exchange')
             ->get();
     }
+
+    /**
+     * Получить все уникальные валюты для select
+     */
+    public static function getAllUniqueCurrencies(): array
+    {
+        return static::where('is_active', true)
+            ->distinct()
+            ->pluck('currency_symbol')
+            ->sort()
+            ->toArray();
+    }
+
+    /**
+     * Получить валюты для конкретной биржи
+     */
+    public static function getCurrenciesForExchange(int $exchangeId): array
+    {
+        return static::where('exchange_id', $exchangeId)
+            ->where('is_active', true)
+            ->pluck('currency_symbol')
+            ->sort()
+            ->toArray();
+    }
 }

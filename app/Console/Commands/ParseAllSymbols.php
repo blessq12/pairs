@@ -24,23 +24,32 @@ class ParseAllSymbols extends Command
 
     public function handle(): void
     {
-        $this->info('🚀 Начинаем парсинг торговых пар с бирж...');
+        $this->info('🚀 Начинаем парсинг торговых пар с бирж (только активные пары из ExchangePair)...');
 
-        $exchanges = Exchange::where('is_active', true)->get();
+        // Получаем только активные пары из ExchangePair
+        $exchangePairs = ExchangePair::getActivePairsForArbitrage();
 
-        if ($this->option('exchange')) {
-            $exchanges = $exchanges->where('name', $this->option('exchange'));
-            if ($exchanges->isEmpty()) {
-                $this->error("❌ Биржа '{$this->option('exchange')}' не найдена или неактивна");
-                return;
-            }
+        if ($exchangePairs->isEmpty()) {
+            $this->error("❌ Не найдено активных пар для парсинга. Сначала добавьте пары в ExchangePair!");
+            return;
         }
 
-        $totalSymbols = 0;
-        $newSymbols = 0;
-        $updatedSymbols = 0;
+        $this->info("📊 Найдено {$exchangePairs->count()} активных пар для парсинга");
 
-        foreach ($exchanges as $exchange) {
+        $totalSymbols = 0;
+        $successfulSymbols = 0;
+        $failedSymbols = 0;
+
+        // Группируем пары по биржам для оптимизации
+        $pairsByExchange = $exchangePairs->groupBy('exchange_id');
+
+        foreach ($pairsByExchange as $exchangeId => $pairs) {
+            $exchange = Exchange::find($exchangeId);
+            if (!$exchange || !$exchange->is_active) {
+                $this->warn("⚠️  Биржа с ID {$exchangeId} не найдена или неактивна, пропускаем");
+                continue;
+            }
+
             $this->info("🔄 Парсим пары с биржи {$exchange->name}...");
 
             try {
@@ -51,59 +60,22 @@ class ParseAllSymbols extends Command
 
                 $parser = $this->parserFactory->createParser($exchange);
 
-                // Проверяем есть ли метод getAllSymbols
-                if (!method_exists($parser, 'getAllSymbols')) {
-                    $this->warn("⚠️  Парсер для биржи {$exchange->name} не поддерживает получение списка пар");
-                    continue;
-                }
-
-                $symbols = collect($parser->getAllSymbols());
-                $this->info("📊 Найдено {$symbols->count()} пар на {$exchange->name}");
-
-                foreach ($symbols as $symbol) {
+                foreach ($pairs as $exchangePair) {
                     $totalSymbols++;
 
-                    // Парсим символ на base и quote валюты
-                    $parsed = $this->parseSymbol($symbol);
-                    if (!$parsed) {
-                        $this->warn("⚠️  Не удалось распарсить символ: {$symbol}");
-                        continue;
+                    try {
+                        // Получаем тикер для конкретной пары
+                        $ticker = $parser->getTicker($exchangePair->symbol_on_exchange);
+
+                        // Здесь можно добавить логику сохранения цен
+                        // Например, сохранить в таблицу prices
+
+                        $successfulSymbols++;
+                        $this->line("✅ Обработана пара: {$exchangePair->symbol_on_exchange} (Ask: {$ticker['ask']}, Bid: {$ticker['bid']})");
+                    } catch (\Exception $e) {
+                        $failedSymbols++;
+                        $this->warn("⚠️  Ошибка при обработке пары {$exchangePair->symbol_on_exchange}: {$e->getMessage()}");
                     }
-
-                    $currencyPair = CurrencyPair::where('symbol', $symbol)->first();
-
-                    if (!$currencyPair) {
-                        // Создаем новую пару
-                        $currencyPair = CurrencyPair::create([
-                            'symbol' => $symbol,
-                            'base_currency' => $parsed['base'],
-                            'quote_currency' => $parsed['quote'],
-                            'is_active' => true,
-                        ]);
-                        $newSymbols++;
-                        $this->line("✅ Добавлена новая пара: {$symbol}");
-                    } else {
-                        // Обновляем существующую пару
-                        $currencyPair->update([
-                            'base_currency' => $parsed['base'],
-                            'quote_currency' => $parsed['quote'],
-                            'is_active' => true,
-                        ]);
-                        $updatedSymbols++;
-                        $this->line("🔄 Обновлена пара: {$symbol}");
-                    }
-
-                    // Добавляем или обновляем запись в exchange_pairs
-                    ExchangePair::updateOrCreate(
-                        [
-                            'exchange_id' => $exchange->id,
-                            'currency_pair_id' => $currencyPair->id,
-                        ],
-                        [
-                            'symbol_on_exchange' => $symbol,
-                            'is_active' => true,
-                        ]
-                    );
                 }
             } catch (\Exception $e) {
                 $this->error("❌ Ошибка при парсинге биржи {$exchange->name}: {$e->getMessage()}");
@@ -120,44 +92,13 @@ class ParseAllSymbols extends Command
             ['Метрика', 'Значение'],
             [
                 ['Всего обработано пар', $totalSymbols],
-                ['Новых пар добавлено', $newSymbols],
-                ['Пар обновлено', $updatedSymbols],
-                ['Всего пар в БД', CurrencyPair::count()],
-                ['Активных пар', CurrencyPair::where('is_active', true)->count()],
+                ['Успешно обработано', $successfulSymbols],
+                ['Ошибок обработки', $failedSymbols],
+                ['Всего пар в ExchangePair', ExchangePair::count()],
+                ['Активных пар в ExchangePair', ExchangePair::where('is_active', true)->count()],
             ]
         );
 
         $this->info('✨ Парсинг торговых пар завершён!');
-    }
-
-    /**
-     * Парсит символ пары на base и quote валюты
-     */
-    private function parseSymbol(string $symbol): ?array
-    {
-        // Популярные quote валюты
-        $quoteCurrencies = ['USDT', 'USDC', 'BTC', 'ETH', 'BNB', 'BUSD', 'TUSD', 'DAI', 'FRAX'];
-
-        foreach ($quoteCurrencies as $quote) {
-            if (str_ends_with($symbol, $quote)) {
-                $base = substr($symbol, 0, -strlen($quote));
-                if (!empty($base)) {
-                    return [
-                        'base' => $base,
-                        'quote' => $quote,
-                    ];
-                }
-            }
-        }
-
-        // Если не нашли стандартную quote валюту, пробуем найти любую 3-4 буквенную валюту в конце
-        if (preg_match('/^(.+?)([A-Z]{3,4})$/', $symbol, $matches)) {
-            return [
-                'base' => $matches[1],
-                'quote' => $matches[2],
-            ];
-        }
-
-        return null;
     }
 }

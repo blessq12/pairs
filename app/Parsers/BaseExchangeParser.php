@@ -7,7 +7,6 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Support\Facades\Log;
 use App\Exceptions\ExchangeParserException;
-use App\Models\Setting;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Request;
@@ -18,7 +17,6 @@ abstract class BaseExchangeParser implements ExchangeParserInterface
     protected Client $client;
     protected string $spotApiUrl;
     protected string $klineApiUrl;
-    protected array $settings;
     protected ?string $apiKey;
     protected ?string $apiSecret;
 
@@ -28,7 +26,6 @@ abstract class BaseExchangeParser implements ExchangeParserInterface
         $this->klineApiUrl = $klineApiUrl;
         $this->apiKey = $apiKey;
         $this->apiSecret = $apiSecret;
-        $this->settings = Setting::getAll();
 
         // Создаем стек обработчиков для ретраев
         $stack = HandlerStack::create();
@@ -42,7 +39,7 @@ abstract class BaseExchangeParser implements ExchangeParserInterface
                 ?\Exception $exception = null
             ) {
                 // Ретраим при таймаутах и 5xx ошибках
-                if ($retries >= $this->settings['parser_retry_attempts']) {
+                if ($retries >= 3) { // Фиксированное значение
                     return false;
                 }
 
@@ -58,13 +55,13 @@ abstract class BaseExchangeParser implements ExchangeParserInterface
             },
             function ($retries) {
                 // Экспоненциальная задержка между попытками
-                return $this->settings['parser_retry_delay'] * pow(2, $retries);
+                return 1000 * pow(2, $retries); // Фиксированное значение
             }
         ));
 
         $this->client = new Client([
-            'timeout' => $this->settings['parser_timeout'],
-            'connect_timeout' => $this->settings['parser_connect_timeout'],
+            'timeout' => 10, // Фиксированное значение
+            'connect_timeout' => 5, // Фиксированное значение
             'handler' => $stack,
         ]);
     }
@@ -115,11 +112,11 @@ abstract class BaseExchangeParser implements ExchangeParserInterface
     }
 
     /**
-     * Получает лимит свечей из настроек
+     * Получает лимит свечей
      */
     protected function getKlineLimit(): int
     {
-        return $this->settings['parser_kline_limit'];
+        return 100; // Фиксированное значение
     }
 
     /**
@@ -131,4 +128,50 @@ abstract class BaseExchangeParser implements ExchangeParserInterface
      * Нормализует интервал под формат конкретной биржи
      */
     abstract protected function normalizeInterval(string $interval): string;
+
+    /**
+     * Получает список всех доступных валют на бирже
+     * Базовая реализация извлекает валюты из торговых пар
+     */
+    public function getAllCurrencies(): array
+    {
+        $symbols = $this->getAllSymbols();
+        $currencies = [];
+
+        foreach ($symbols as $symbol) {
+            // Извлекаем валюты из символа пары (например, BTCUSDT -> BTC, USDT)
+            $currencies = array_merge($currencies, $this->extractCurrenciesFromSymbol($symbol));
+        }
+
+        // Убираем дубликаты и сортируем
+        return array_unique($currencies);
+    }
+
+    /**
+     * Извлекает валюты из символа торговой пары
+     */
+    protected function extractCurrenciesFromSymbol(string $symbol): array
+    {
+        // Популярные котируемые валюты
+        $quoteCurrencies = ['USDT', 'USDC', 'BTC', 'ETH', 'BNB', 'BUSD', 'DAI', 'TUSD', 'PAX', 'USDK'];
+
+        foreach ($quoteCurrencies as $quote) {
+            if (str_ends_with($symbol, $quote)) {
+                $base = substr($symbol, 0, -strlen($quote));
+                if (!empty($base)) {
+                    return [$base, $quote];
+                }
+            }
+        }
+
+        // Если не нашли стандартную котируемую валюту, делим пополам
+        $length = strlen($symbol);
+        if ($length >= 6) {
+            $base = substr($symbol, 0, $length - 4);
+            $quote = substr($symbol, -4);
+            return [$base, $quote];
+        }
+
+        return [];
+    }
 }

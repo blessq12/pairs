@@ -18,6 +18,7 @@ class ExchangeApiKeyResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-key';
 
     protected static ?string $navigationLabel = 'API Ключи';
+    protected static ?string $navigationGroup = 'Биржи';
 
     // protected static ?string $navigationGroup = 'Управление биржами';
 
