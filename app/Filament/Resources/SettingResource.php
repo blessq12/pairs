@@ -19,10 +19,6 @@ class SettingResource extends Resource
     {
         return $form
             ->schema([
-
-
-
-
                 Forms\Components\Section::make('Арбитраж')
                     ->schema([
                         Forms\Components\TextInput::make('min_profit_percent')
@@ -85,9 +81,6 @@ class SettingResource extends Resource
                             ->dehydrateStateUsing(fn($state) => filled($state) ? $state : null),
                         Forms\Components\TextInput::make('telegram_chat_id')
                             ->label('ID чата'),
-                        Forms\Components\TextInput::make('telegram_message_template')
-                            ->label('Шаблон сообщения')
-                            ->required(),
                     ]),
 
                 Forms\Components\Section::make('Хранение данных')
