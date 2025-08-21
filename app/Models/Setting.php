@@ -29,6 +29,18 @@ class Setting extends Model
         'price_cleanup_enabled' => 'boolean',
         'dashboard_refresh_interval' => 'integer',
         'top_pairs_limit' => 'integer',
+
+        // Arbitrage settings
+        'min_profit_percent' => 'float',
+        'min_volume_usd' => 'float',
+        'alert_cooldown_minutes' => 'integer',
+        'poll_interval_minutes' => 'integer',
+
+        // Exchange commission settings
+        'mexc_commission' => 'float',
+        'bybit_commission' => 'float',
+        'bingx_commission' => 'float',
+        'coinex_commission' => 'float',
     ];
 
     /**
@@ -58,9 +70,8 @@ class Setting extends Model
      */
     public static function getAll(): array
     {
-        return Cache::rememberForever('settings', function () {
-            return self::firstOrCreate()->toArray();
-        });
+        $settings = self::firstOrCreate();
+        return $settings->getAttributes();
     }
 
     /**

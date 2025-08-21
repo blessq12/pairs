@@ -12,10 +12,9 @@ class ExchangeParserFactory
      */
     private const PARSERS = [
         'MEXC' => MexcParser::class,
-        // Добавляй новые биржи здесь
-        // 'Bybit' => BybitParser::class,
-        // 'BingX' => BingXParser::class,
-        // 'CoinEx' => CoinExParser::class,
+        'Bybit' => BybitParser::class,
+        'BingX' => BingXParser::class,
+        'CoinEx' => CoinExParser::class,
     ];
 
     /**
@@ -39,9 +38,22 @@ class ExchangeParserFactory
             );
         }
 
+        // Получаем API ключи для биржи
+        $apiKey = null;
+        $apiSecret = null;
+
+        // Временно отключаем API ключи из-за проблем с шифрованием
+        // $exchangeApiKey = $exchange->apiKeys()->first();
+        // if ($exchangeApiKey) {
+        //     $apiKey = $exchangeApiKey->api_key;
+        //     $apiSecret = $exchangeApiKey->api_secret;
+        // }
+
         return new $parserClass(
             $exchange->spot_api_url,
-            $exchange->kline_api_url
+            $exchange->kline_api_url,
+            $apiKey,
+            $apiSecret
         );
     }
 

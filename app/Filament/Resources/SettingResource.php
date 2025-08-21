@@ -89,6 +89,60 @@ class SettingResource extends Resource
                             ->required(),
                     ]),
 
+                Forms\Components\Section::make('Арбитраж')
+                    ->schema([
+                        Forms\Components\TextInput::make('min_profit_percent')
+                            ->label('Минимальный профит (%)')
+                            ->numeric()
+                            ->minValue(0.1)
+                            ->step(0.1)
+                            ->required(),
+                        Forms\Components\TextInput::make('min_volume_usd')
+                            ->label('Минимальный объём (USD)')
+                            ->numeric()
+                            ->minValue(1)
+                            ->step(1)
+                            ->required(),
+                        Forms\Components\TextInput::make('alert_cooldown_minutes')
+                            ->label('Задержка алертов (минуты)')
+                            ->numeric()
+                            ->minValue(1)
+                            ->required(),
+                        Forms\Components\TextInput::make('poll_interval_minutes')
+                            ->label('Интервал опроса (минуты)')
+                            ->numeric()
+                            ->minValue(1)
+                            ->required(),
+                    ]),
+
+                Forms\Components\Section::make('Комиссии бирж')
+                    ->schema([
+                        Forms\Components\TextInput::make('mexc_commission')
+                            ->label('MEXC комиссия')
+                            ->numeric()
+                            ->minValue(0)
+                            ->step(0.0001)
+                            ->required(),
+                        Forms\Components\TextInput::make('bybit_commission')
+                            ->label('Bybit комиссия')
+                            ->numeric()
+                            ->minValue(0)
+                            ->step(0.0001)
+                            ->required(),
+                        Forms\Components\TextInput::make('bingx_commission')
+                            ->label('BingX комиссия')
+                            ->numeric()
+                            ->minValue(0)
+                            ->step(0.0001)
+                            ->required(),
+                        Forms\Components\TextInput::make('coinex_commission')
+                            ->label('CoinEx комиссия')
+                            ->numeric()
+                            ->minValue(0)
+                            ->step(0.0001)
+                            ->required(),
+                    ]),
+
                 Forms\Components\Section::make('Telegram')
                     ->schema([
                         Forms\Components\TextInput::make('telegram_bot_token')
@@ -174,6 +228,28 @@ class SettingResource extends Resource
                 Tables\Columns\IconColumn::make('notification_enabled')
                     ->label('Уведомления')
                     ->boolean(),
+
+                // Arbitrage Settings
+                Tables\Columns\TextColumn::make('min_profit_percent')
+                    ->label('Мин. профит')
+                    ->suffix('%')
+                    ->numeric()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('min_volume_usd')
+                    ->label('Мин. объём')
+                    ->prefix('$')
+                    ->numeric()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('alert_cooldown_minutes')
+                    ->label('Cooldown')
+                    ->suffix(' мин')
+                    ->numeric()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('poll_interval_minutes')
+                    ->label('Опрос')
+                    ->suffix(' мин')
+                    ->numeric()
+                    ->toggleable(),
 
                 // Data Storage Settings
                 Tables\Columns\TextColumn::make('price_history_days')

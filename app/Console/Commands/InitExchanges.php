@@ -14,7 +14,7 @@ class InitExchanges extends Command
         [
             'name' => 'MEXC',
             'api_base_url' => 'https://api.mexc.com',
-            'spot_api_url' => 'https://api.mexc.com/api/v3/ticker/price',
+            'spot_api_url' => 'https://api.mexc.com/api/v3/ticker/bookTicker',
             'futures_api_url' => 'https://contract.mexc.com/api/v1/contract/ticker',
             'kline_api_url' => 'https://api.mexc.com/api/v3/klines',
             'is_active' => true,
@@ -30,17 +30,17 @@ class InitExchanges extends Command
         [
             'name' => 'BingX',
             'api_base_url' => 'https://open-api.bingx.com',
-            'spot_api_url' => 'https://open-api.bingx.com/openApi/api/v3/market/ticker',
+            'spot_api_url' => 'https://open-api.bingx.com/openApi/spot/v1/market/ticker',
             'futures_api_url' => 'https://open-api.bingx.com/openApi/api/v3/market/ticker?type=PERPETUAL',
-            'kline_api_url' => 'https://open-api.bingx.com/openApi/api/v3/market/kline',
-            'is_active' => true,
+            'kline_api_url' => 'https://open-api.bingx.com/openApi/spot/v1/market/kline',
+            'is_active' => false, // Временно отключена из-за проблем с API
         ],
         [
             'name' => 'CoinEx',
             'api_base_url' => 'https://api.coinex.com',
-            'spot_api_url' => 'https://api.coinex.com/v2/market/ticker',
+            'spot_api_url' => 'https://api.coinex.com/v1/market/ticker',
             'futures_api_url' => 'https://api.coinex.com/perpetual/v2/market/ticker',
-            'kline_api_url' => 'https://api.coinex.com/v2/market/kline',
+            'kline_api_url' => 'https://api.coinex.com/v1/market/kline',
             'is_active' => true,
         ],
     ];

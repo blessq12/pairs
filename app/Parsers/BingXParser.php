@@ -4,7 +4,7 @@ namespace App\Parsers;
 
 use App\Exceptions\ExchangeParserException;
 
-class MexcParser extends BaseExchangeParser
+class BingXParser extends BaseExchangeParser
 {
     public function getTicker(string $symbol): array
     {
@@ -14,19 +14,24 @@ class MexcParser extends BaseExchangeParser
             'symbol' => $normalizedSymbol,
         ]);
 
-        if (!isset($data['askPrice'], $data['bidPrice'])) {
-            throw new ExchangeParserException('Invalid ticker data format from MEXC');
+        if (!isset($data['data']) || !is_array($data['data'])) {
+            throw new ExchangeParserException('Invalid ticker data format from BingX');
+        }
+
+        $ticker = $data['data'][0] ?? $data['data'];
+
+        if (!isset($ticker['ask'], $ticker['bid'])) {
+            throw new ExchangeParserException('Missing ask/bid prices in BingX ticker data');
         }
 
         return [
-            'ask' => (float)$data['askPrice'],
-            'bid' => (float)$data['bidPrice'],
+            'ask' => (float)$ticker['ask'],
+            'bid' => (float)$ticker['bid'],
         ];
     }
 
     public function getKline(string $symbol, string $interval): array
     {
-        // Проверяем поддерживается ли интервал
         $this->validateInterval($interval);
 
         $normalizedSymbol = $this->normalizeSymbol($symbol);
@@ -38,35 +43,35 @@ class MexcParser extends BaseExchangeParser
             'limit' => $this->getKlineLimit(),
         ]);
 
-        if (!is_array($data)) {
-            throw new ExchangeParserException('Invalid kline data format from MEXC');
+        if (!isset($data['data'])) {
+            throw new ExchangeParserException('Invalid kline data format from BingX');
         }
 
         return array_map(function ($candle) {
             if (count($candle) < 6) {
-                throw new ExchangeParserException('Invalid candle data format from MEXC');
+                throw new ExchangeParserException('Invalid candle data format from BingX');
             }
 
             return [
-                'timestamp' => (int)($candle[0] / 1000), // MEXC даёт в миллисекундах
+                'timestamp' => (int)($candle[0] / 1000), // BingX даёт в миллисекундах
                 'open' => (float)$candle[1],
                 'high' => (float)$candle[2],
                 'low' => (float)$candle[3],
                 'close' => (float)$candle[4],
                 'volume' => (float)$candle[5],
             ];
-        }, $data);
+        }, $data['data']);
     }
 
     protected function normalizeSymbol(string $symbol): string
     {
-        // MEXC использует формат без слэша: BTC/USDT -> BTCUSDT
+        // BingX использует формат без слэша: BTC/USDT -> BTCUSDT
         return str_replace('/', '', $symbol);
     }
 
     protected function normalizeInterval(string $interval): string
     {
-        // MEXC использует тот же формат что и мы ('1m', '5m', '15m', '30m', '1h', '4h', '1d')
+        // BingX использует тот же формат что и мы
         return $interval;
     }
 }

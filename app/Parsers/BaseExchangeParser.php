@@ -19,11 +19,15 @@ abstract class BaseExchangeParser implements ExchangeParserInterface
     protected string $spotApiUrl;
     protected string $klineApiUrl;
     protected array $settings;
+    protected ?string $apiKey;
+    protected ?string $apiSecret;
 
-    public function __construct(string $spotApiUrl, string $klineApiUrl)
+    public function __construct(string $spotApiUrl, string $klineApiUrl, ?string $apiKey = null, ?string $apiSecret = null)
     {
         $this->spotApiUrl = $spotApiUrl;
         $this->klineApiUrl = $klineApiUrl;
+        $this->apiKey = $apiKey;
+        $this->apiSecret = $apiSecret;
         $this->settings = Setting::getAll();
 
         // Создаем стек обработчиков для ретраев
