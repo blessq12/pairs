@@ -12,12 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('exchange_pairs', function (Blueprint $table) {
-
-            $table->dropColumn('currency_pair_id');
+            // Сначала удаляем внешний ключ
+            $table->dropForeign(['currency_pair_id']);
 
             // Удаляем старые индексы
             $table->dropUnique(['exchange_id', 'currency_pair_id']);
             $table->dropIndex(['currency_pair_id', 'is_active']);
+
+            // Теперь удаляем колонку
+            $table->dropColumn('currency_pair_id');
 
             // Добавляем новые индексы
             $table->unique(['exchange_id', 'base_currency', 'quote_currency']);
