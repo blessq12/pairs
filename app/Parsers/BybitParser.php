@@ -104,4 +104,32 @@ class BybitParser extends BaseExchangeParser
             return null;
         }
     }
+
+    /**
+     * Получает список всех доступных торговых пар
+     */
+    public function getAllSymbols(): array
+    {
+        try {
+            $data = $this->makeRequest($this->spotApiUrl, [
+                'category' => 'spot',
+            ]);
+
+            if (!isset($data['result']['list'])) {
+                throw new ExchangeParserException('Invalid symbols data format from Bybit');
+            }
+
+            $symbols = [];
+            foreach ($data['result']['list'] as $item) {
+                if (isset($item['symbol'])) {
+                    $symbols[] = $item['symbol'];
+                }
+            }
+
+            return $symbols;
+        } catch (\Exception $e) {
+            Log::error("Ошибка при получении списка пар с Bybit: {$e->getMessage()}");
+            throw new ExchangeParserException("Failed to get symbols from Bybit: {$e->getMessage()}");
+        }
+    }
 }

@@ -14,8 +14,8 @@ class TelegramService
 
     public function __construct()
     {
-        $this->botToken = Setting::get('telegram_bot_token', '');
-        $this->chatId = Setting::get('telegram_chat_id', '');
+        $this->botToken = config('services.telegram.bot_token', '');
+        $this->chatId = config('services.telegram.chat_id', '');
         $this->messageTemplate = Setting::get('telegram_message_template', 'Пара {pair}: профит {profit}% на {exchange}');
     }
 
@@ -30,7 +30,7 @@ class TelegramService
         }
 
         try {
-            $response = Http::timeout(10)->post("https://api.telegram.org/bot{$this->botToken}/sendMessage", [
+            $response = Http::timeout(30)->post("https://api.telegram.org/bot{$this->botToken}/sendMessage", [
                 'chat_id' => $this->chatId,
                 'text' => $message,
                 'parse_mode' => 'HTML',
@@ -71,21 +71,29 @@ class TelegramService
      */
     private function formatArbitrageMessage(array $opportunity): string
     {
-        $buyExchange = $opportunity['buy_exchange']->name;
-        $sellExchange = $opportunity['sell_exchange']->name;
-        $pair = $opportunity['currency_pair']->symbol;
+        // Получаем названия бирж из ID
+        $buyExchange = \App\Models\Exchange::find($opportunity['buy_exchange_id'])->name;
+        $sellExchange = \App\Models\Exchange::find($opportunity['sell_exchange_id'])->name;
+        $pair = \App\Models\CurrencyPair::find($opportunity['currency_pair_id'])->symbol;
         $netProfit = round($opportunity['net_profit_percent'], 2);
         $profitUsd = round($opportunity['profit_usd'], 2);
         $buyPrice = $opportunity['buy_price'];
         $sellPrice = $opportunity['sell_price'];
+        $volumeBuy = round($opportunity['volume_24h_buy'], 2);
+        $volumeSell = round($opportunity['volume_24h_sell'], 2);
+        $minVolume = round($opportunity['min_volume_usd'], 2);
 
         $message = "🚨 <b>АРБИТРАЖНАЯ ВОЗМОЖНОСТЬ</b>\n\n";
         $message .= "💰 <b>Пара:</b> {$pair}\n";
-        $message .= "📈 <b>Профит:</b> {$netProfit}% (${$profitUsd})\n\n";
-        $message .= "🛒 <b>Покупка:</b> {$buyExchange} по ${$buyPrice}\n";
-        $message .= "🛍️ <b>Продажа:</b> {$sellExchange} по ${$sellPrice}\n\n";
+        $message .= "📈 <b>Профит:</b> {$netProfit}% (\$" . $profitUsd . ")\n\n";
+        $message .= "🛒 <b>Покупка:</b> {$buyExchange} по \$" . $buyPrice . "\n";
+        $message .= "🛍️ <b>Продажа:</b> {$sellExchange} по \$" . $sellPrice . "\n\n";
         $message .= "📊 <b>Комиссии:</b> " . round($opportunity['total_commission'] * 100, 2) . "%\n";
-        $message .= "⏰ <b>Обнаружено:</b> " . $opportunity['detected_at']->format('H:i:s') . "\n\n";
+        $message .= "📈 <b>Объемы 24ч:</b>\n";
+        $message .= "   • {$buyExchange}: \${$volumeBuy}\n";
+        $message .= "   • {$sellExchange}: \${$volumeSell}\n";
+        $message .= "   • Минимум: \${$minVolume}\n\n";
+        $message .= "⏰ <b>Обнаружено:</b> " . now()->format('H:i:s') . "\n\n";
         $message .= "🔗 <b>Действуй быстро!</b>";
 
         return $message;

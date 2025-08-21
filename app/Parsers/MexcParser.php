@@ -69,4 +69,30 @@ class MexcParser extends BaseExchangeParser
         // MEXC использует тот же формат что и мы ('1m', '5m', '15m', '30m', '1h', '4h', '1d')
         return $interval;
     }
+
+    /**
+     * Получает список всех доступных торговых пар
+     */
+    public function getAllSymbols(): array
+    {
+        try {
+            $data = $this->makeRequest('https://api.mexc.com/api/v3/exchangeInfo', []);
+
+            if (!isset($data['symbols'])) {
+                throw new ExchangeParserException('Invalid symbols data format from MEXC');
+            }
+
+            $symbols = [];
+            foreach ($data['symbols'] as $symbol) {
+                if (isset($symbol['symbol']) && $symbol['status'] === 'TRADING') {
+                    $symbols[] = $symbol['symbol'];
+                }
+            }
+
+            return $symbols;
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Ошибка при получении списка пар с MEXC: {$e->getMessage()}");
+            throw new ExchangeParserException("Failed to get symbols from MEXC: {$e->getMessage()}");
+        }
+    }
 }

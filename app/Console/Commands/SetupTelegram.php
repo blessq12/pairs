@@ -46,14 +46,14 @@ class SetupTelegram extends Command
 
         // Проверяем подключение
         $this->info('🔍 Проверяем подключение к Telegram...');
-        
+
         if ($this->telegramService->isConfigured()) {
             $this->info('✅ Telegram настроен корректно');
-            
+
             // Отправляем тестовое сообщение
             $this->info('📤 Отправляем тестовое сообщение...');
             $success = $this->telegramService->sendTestMessage();
-            
+
             if ($success) {
                 $this->info('✅ Тестовое сообщение отправлено успешно!');
             } else {
@@ -67,14 +67,14 @@ class SetupTelegram extends Command
     private function sendTestMessage(): void
     {
         $this->info('🧪 Отправляем тестовое сообщение...');
-        
+
         if (!$this->telegramService->isConfigured()) {
             $this->error('❌ Telegram не настроен. Сначала настройте токен и ID чата.');
             return;
         }
-        
+
         $success = $this->telegramService->sendTestMessage();
-        
+
         if ($success) {
             $this->info('✅ Тестовое сообщение отправлено успешно!');
         } else {

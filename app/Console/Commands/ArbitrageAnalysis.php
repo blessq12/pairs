@@ -80,7 +80,6 @@ class ArbitrageAnalysis extends Command
                     ['Отправлено алертов', $sentCount],
                 ]
             );
-
         } catch (\Exception $e) {
             $error = "Ошибка при анализе арбитража: {$e->getMessage()}";
             $this->error("❌ {$error}");
@@ -96,9 +95,9 @@ class ArbitrageAnalysis extends Command
     private function sendTestMessage(): void
     {
         $this->info('🧪 Отправляем тестовое сообщение...');
-        
+
         $success = $this->notificationService->sendTestMessage();
-        
+
         if ($success) {
             $this->info('✅ Тестовое сообщение отправлено успешно!');
         } else {

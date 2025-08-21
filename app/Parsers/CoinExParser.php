@@ -74,4 +74,30 @@ class CoinExParser extends BaseExchangeParser
         // CoinEx использует тот же формат что и мы
         return $interval;
     }
+
+    /**
+     * Получает список всех доступных торговых пар
+     */
+    public function getAllSymbols(): array
+    {
+        try {
+            $data = $this->makeRequest('https://api.coinex.com/v1/market/info', []);
+
+            if (!isset($data['data'])) {
+                throw new ExchangeParserException('Invalid symbols data format from CoinEx');
+            }
+
+            $symbols = [];
+            foreach ($data['data'] as $market => $info) {
+                if (isset($info['name'])) {
+                    $symbols[] = $info['name'];
+                }
+            }
+
+            return $symbols;
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Ошибка при получении списка пар с CoinEx: {$e->getMessage()}");
+            throw new ExchangeParserException("Failed to get symbols from CoinEx: {$e->getMessage()}");
+        }
+    }
 }

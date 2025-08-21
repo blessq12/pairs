@@ -71,4 +71,14 @@ class Exchange extends Model
     {
         return $this->hasMany(ExchangeApiKey::class);
     }
+
+    public function currencies(): HasMany
+    {
+        return $this->hasMany(ExchangeCurrency::class);
+    }
+
+    public function exchangePairs(): HasMany
+    {
+        return $this->hasMany(ExchangePair::class);
+    }
 }

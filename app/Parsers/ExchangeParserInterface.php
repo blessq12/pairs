@@ -29,4 +29,12 @@ interface ExchangeParserInterface
      * @throws \App\Exceptions\ExchangeParserException
      */
     public function getKline(string $symbol, string $interval): array;
+
+    /**
+     * Получает список всех доступных торговых пар
+     *
+     * @return array<string> Массив символов пар (например, ['BTCUSDT', 'ETHUSDT'])
+     * @throws \App\Exceptions\ExchangeParserException
+     */
+    public function getAllSymbols(): array;
 }

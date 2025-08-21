@@ -58,7 +58,7 @@ class PollExchanges extends Command
             try {
                 $parser = $this->parserFactory->createParser($exchange);
                 $exchangeResults = $this->pollExchange($parser, $exchange, $pairs);
-                
+
                 $totalRequests += $exchangeResults['total'];
                 $successfulRequests += $exchangeResults['successful'];
                 $errors = array_merge($errors, $exchangeResults['errors']);
@@ -102,7 +102,7 @@ class PollExchanges extends Command
     private function getPairsToPoll()
     {
         $pairsInput = $this->option('pairs');
-        
+
         if ($pairsInput) {
             $pairSymbols = array_map('trim', explode(',', $pairsInput));
             return CurrencyPair::whereIn('symbol', $pairSymbols)
@@ -124,7 +124,7 @@ class PollExchanges extends Command
 
             try {
                 $ticker = $parser->getTicker($pair->symbol);
-                
+
                 // Сохраняем цену в базу
                 Price::updateOrCreate(
                     [

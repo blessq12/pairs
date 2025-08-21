@@ -35,11 +35,11 @@ class NotificationService
         foreach ($opportunities as $opportunity) {
             try {
                 $success = $this->telegramService->sendArbitrageAlert($opportunity->toArray());
-                
+
                 if ($success) {
                     $opportunity->markAsAlerted();
                     $sentCount++;
-                    
+
                     Log::info('Алерт отправлен', [
                         'pair' => $opportunity->currencyPair->symbol,
                         'profit' => $opportunity->net_profit_percent,

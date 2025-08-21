@@ -63,6 +63,13 @@ class BingXParser extends BaseExchangeParser
         }, $data['data']);
     }
 
+    public function getAllSymbols(): array
+    {
+        // Для BingX используем базовую реализацию или возвращаем пустой массив
+        // так как этот метод не критичен для арбитража
+        return [];
+    }
+
     protected function normalizeSymbol(string $symbol): string
     {
         // BingX использует формат без слэша: BTC/USDT -> BTCUSDT

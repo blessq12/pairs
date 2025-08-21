@@ -6,20 +6,20 @@ use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Log;
 
 
-Schedule::command('pairs:poll-exchanges')
+Schedule::command('pairs:poll-queued')
     ->everyFiveMinutes()
     ->withoutOverlapping()
     ->runInBackground()
     ->onFailure(function () {
-        Log::error('Ошибка при опросе бирж');
+        Log::error('Ошибка при опросе бирж (queued)');
     });
 
-Schedule::command('pairs:arbitrage-analysis')
+Schedule::command('pairs:arbitrage-queued')
     ->everyFiveMinutes()
     ->withoutOverlapping()
     ->runInBackground()
     ->onFailure(function () {
-        Log::error('Ошибка при анализе арбитража');
+        Log::error('Ошибка при анализе арбитража (queued)');
     });
 
 Schedule::command('pairs:cleanup-old-data')
