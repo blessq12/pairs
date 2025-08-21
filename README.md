@@ -1,61 +1,179 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Trading Arbitrage System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Система мониторинга и анализа арбитражных возможностей на криптовалютных биржах.
 
-## About Laravel
+## 🏗️ Архитектура
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Приложение построено на Laravel с использованием Filament для админ-панели. Система предназначена для автоматического поиска арбитражных возможностей между различными биржами и отправки уведомлений.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 📊 Основные модели
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Exchange (Биржа)
 
-## Learning Laravel
+-   **Назначение**: Управление подключениями к криптовалютным биржам
+-   **Основные поля**:
+    -   `name` - название биржи (MEXC, Bybit, BingX, CoinEx)
+    -   `api_base_url`, `spot_api_url`, `futures_api_url`, `kline_api_url` - API endpoints (шифруются)
+    -   `is_active` - активность биржи
+-   **Связи**: `apiKeys`, `currencies`, `exchangePairs`
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### ExchangeApiKey (API ключи)
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+-   **Назначение**: Безопасное хранение API ключей для бирж
+-   **Особенности**: Все ключи шифруются в базе данных
+-   **Связи**: `exchange`
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### ExchangePair (Торговые пары)
 
-## Laravel Sponsors
+-   **Назначение**: Управление торговыми парами на каждой бирже
+-   **Основные поля**:
+    -   `base_currency`, `quote_currency` - валюты пары
+    -   `symbol_on_exchange` - символ на конкретной бирже
+    -   `taker_fee` - комиссия за сделку
+    -   `is_active` - активность пары
+-   **Связи**: `exchange`
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### ArbitrageOpportunity (Арбитражные возможности)
 
-### Premium Partners
+-   **Назначение**: Хранение найденных арбитражных возможностей
+-   **Основные поля**:
+    -   `buy_exchange_id`, `sell_exchange_id` - биржи покупки/продажи
+    -   `base_currency`, `quote_currency` - торговая пара
+    -   `buy_price`, `sell_price` - цены покупки/продажи
+    -   `profit_percent`, `net_profit_percent` - профит до/после комиссий
+    -   `volume_24h_buy`, `volume_24h_sell` - объёмы торгов
+    -   `detected_at`, `alerted_at`, `expired_at` - временные метки
+-   **Связи**: `buyExchange`, `sellExchange`
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### Setting (Настройки)
 
-## Contributing
+-   **Назначение**: Централизованное управление настройками системы
+-   **Основные секции**:
+    -   **Арбитраж**: минимальный профит, объём, интервалы
+    -   **Комиссии**: настройки комиссий для каждой биржи
+    -   **Telegram**: токен бота и ID чата
+    -   **Хранение данных**: период хранения, очистка
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 🔄 Логика работы
 
-## Code of Conduct
+### 1. Сбор данных (PollExchanges)
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+php artisan pairs:poll-exchanges
+```
 
-## Security Vulnerabilities
+-   Опрашивает все активные биржи
+-   Получает текущие цены bid/ask для торговых пар
+-   Сохраняет данные в базу с группировкой по минутам
+-   Обрабатывает ошибки и ведёт статистику
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### 2. Анализ арбитража (ArbitrageAnalysis)
 
-## License
+```bash
+php artisan pairs:arbitrage-analysis
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+-   Собирает актуальные цены с бирж в реальном времени
+-   Группирует пары по символу (BTC/USDT, ETH/BTC и т.д.)
+-   Сравнивает цены между биржами для поиска разницы
+-   Рассчитывает профит с учётом комиссий
+-   Фильтрует по минимальному профиту и объёму
+-   Сохраняет найденные возможности в базу
+
+### 3. Уведомления (NotificationService)
+
+-   Проверяет готовые для алерта возможности
+-   Отправляет сводку в Telegram одним сообщением
+-   Помечает возможности как отправленные
+-   Обрабатывает ошибки отправки
+
+## ⏰ Планировщик (routes/console.php)
+
+### Основные задачи:
+
+1. **Арбитражный анализ** - каждые 5 минут
+
+    ```php
+    Schedule::command('arbitrage:run')->everyFiveMinutes()
+    ```
+
+2. **Проверка статуса** - каждый час
+
+    ```php
+    Schedule::command('arbitrage:status')->hourly()
+    ```
+
+3. **Очистка старых данных** - ежедневно в 2:00
+
+    ```php
+    // Удаляет возможности старше 7 дней
+    ```
+
+4. **Ежедневный отчёт** - ежедневно в 9:00
+    ```php
+    // Отправляет статистику за вчерашний день
+    ```
+
+## 🔄 Основные флоу
+
+### Флоу 1: Полный цикл арбитража
+
+1. **Сбор данных** → `PollExchanges` получает цены с бирж
+2. **Анализ** → `ArbitrageAnalysis` ищет возможности
+3. **Сохранение** → Возможности записываются в БД
+4. **Уведомления** → Готовые возможности отправляются в Telegram
+
+### Флоу 2: Обработка арбитражной возможности
+
+1. **Обнаружение** → Система находит разницу в ценах
+2. **Валидация** → Проверка минимального профита и объёма
+3. **Расчёт комиссий** → Учёт комиссий обеих бирж
+4. **Сохранение** → Запись в `ArbitrageOpportunity`
+5. **Алерт** → Отправка уведомления (если готово)
+
+### Флоу 3: Управление настройками
+
+1. **Админ-панель** → Настройка параметров через Filament
+2. **Валидация** → Проверка корректности значений
+3. **Применение** → Использование в анализе и уведомлениях
+
+### Флоу 4: Обработка ошибок
+
+1. **Логирование** → Все ошибки записываются в лог
+2. **Уведомления** → Критические ошибки отправляются в Telegram
+3. **Восстановление** → Система продолжает работу после ошибок
+
+## 🛠️ Команды Artisan
+
+-   `pairs:poll-exchanges` - опрос бирж для получения цен
+-   `pairs:arbitrage-analysis` - полный анализ арбитража
+-   `arbitrage:run` - основной цикл (опрос + анализ + уведомления)
+-   `arbitrage:status` - проверка статуса системы
+-   `pairs:cleanup-old-data` - очистка старых данных
+
+## 🔐 Безопасность
+
+-   Все API ключи шифруются в базе данных
+-   URL бирж также шифруются
+-   Валидация всех входных данных
+-   Логирование всех операций
+
+## 📱 Уведомления
+
+Система использует Telegram для уведомлений:
+
+-   Арбитражные возможности
+-   Ежедневные отчёты
+-   Ошибки системы
+-   Тестовые сообщения
+
+## 🎯 Настройки
+
+Основные параметры настраиваются через админ-панель:
+
+-   Минимальный профит (по умолчанию 2%)
+-   Минимальный объём (по умолчанию $100)
+-   Интервал опроса (по умолчанию 5 минут)
+-   Задержка алертов (по умолчанию 10 минут)
+-   Комиссии для каждой биржи
+-   Telegram настройки
